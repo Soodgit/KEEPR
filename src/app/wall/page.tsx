@@ -41,12 +41,31 @@ export default function MemoryWall() {
   });
   const router = useRouter();
 
+  const loadUserProfile = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      
+      const response = await get("/profile", token);
+      if (response && !response.error) {
+        setUser({ name: response.name, email: response.email });
+      } else {
+        // Fallback to token parsing or default
+        setUser({ name: "User" });
+      }
+    } catch (error) {
+      console.error("Failed to load user profile:", error);
+      // Fallback user data
+      setUser({ name: "User" });
+    }
+  }, []);
+
   const loadMemories = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       console.log("Loading memories with token:", token ? "present" : "missing");
       
-      const response = await get("/memories/unlocked", token || undefined);
+      const response = await get("/memories/my", token || undefined);
       console.log("API Response:", response);
       
       if (response && Array.isArray(response)) {
@@ -142,13 +161,33 @@ export default function MemoryWall() {
       return;
     }
 
-    // Load user info from token or make API call
-    const userData: User = { name: "Alex" }; // This would come from JWT decode or API
-    setUser(userData);
-
-    // Load memories
+    // Load user profile and memories
+    loadUserProfile();
     loadMemories();
-  }, [router, loadMemories]);
+
+    // Add event listener to refresh data when page becomes visible
+    // This helps update the name when user comes back from profile page
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadUserProfile();
+        loadMemories();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also refresh on window focus
+    const handleFocus = () => {
+      loadUserProfile();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [router, loadMemories, loadUserProfile]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -189,9 +228,12 @@ export default function MemoryWall() {
               </button>
               
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                <button 
+                  onClick={() => router.push("/profile")}
+                  className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center hover:bg-orange-200 transition-colors"
+                >
                   <span className="text-orange-600 text-sm font-medium">A</span>
-                </div>
+                </button>
                 <span className="text-gray-700">{user?.name}</span>
                 <button 
                   onClick={handleLogout}
@@ -212,7 +254,7 @@ export default function MemoryWall() {
         {/* Page Title */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Your KEEPR Collection</h2>
-          <p className="text-gray-600">Unlocked memories appear here</p>
+          <p className="text-gray-600">All your memories - click locked ones to unlock them</p>
         </div>
 
         {/* Search and Filters */}
@@ -269,13 +311,33 @@ export default function MemoryWall() {
           {filteredMemories.map((memory) => (
             <div key={memory.id} className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
               <div className="relative">
-                <Image
-                  src={memory.imageUrl}
-                  alt={memory.title}
-                  width={400}
-                  height={300}
-                  className="w-full h-48 object-cover"
-                />
+                {memory.imageUrl ? (
+                  <Image
+                    src={memory.imageUrl}
+                    alt={memory.title}
+                    width={400}
+                    height={300}
+                    className="w-full h-48 object-cover"
+                    onError={(e) => {
+                      // Fallback to placeholder if image fails to load
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                {/* Fallback placeholder */}
+                <div 
+                  className="w-full h-48 bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center"
+                  style={{ display: memory.imageUrl ? 'none' : 'flex' }}
+                >
+                  <div className="text-center">
+                    <svg className="w-12 h-12 text-orange-400 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"/>
+                    </svg>
+                    <p className="text-orange-600 text-sm font-medium">{memory.title}</p>
+                  </div>
+                </div>
                 {memory.isLocked && (
                   <button
                     onClick={() => handleUnlockClick(memory.id, memory.title)}

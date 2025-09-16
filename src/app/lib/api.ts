@@ -12,6 +12,18 @@ export const post = async (path: string, data: unknown, token?: string) => {
   return res.json();
 };
 
+export const put = async (path: string, data: unknown, token?: string) => {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(data)
+  });
+  return res.json();
+};
+
 export const get = async (path: string, token?: string) => {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {}
