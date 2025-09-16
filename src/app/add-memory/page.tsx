@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { post } from "../lib/api";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import ImageUpload from "../components/ImageUpload";
 
 export default function AddMemory() {
   const [formData, setFormData] = useState({
@@ -12,7 +12,6 @@ export default function AddMemory() {
     keyword: "",
     imageUrl: ""
   });
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
@@ -24,19 +23,11 @@ export default function AddMemory() {
     }));
   };
 
-  const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const url = e.target.value;
+  const handleImageUpload = (imageUrl: string) => {
     setFormData(prev => ({
       ...prev,
-      imageUrl: url
+      imageUrl: imageUrl
     }));
-    
-    // Only set preview if URL looks valid
-    if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
-      setImagePreview(url);
-    } else {
-      setImagePreview(null);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,7 +68,6 @@ export default function AddMemory() {
           keyword: "",
           imageUrl: ""
         });
-        setImagePreview(null);
         router.push("/wall");
       }
     } catch (error) {
@@ -119,45 +109,11 @@ export default function AddMemory() {
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Memory Photo
               </label>
-              <div className="space-y-4">
-                <input
-                  type="url"
-                  name="imageUrl"
-                  value={formData.imageUrl}
-                  onChange={handleImageUrlChange}
-                  placeholder="Enter image URL (e.g., from Unsplash)"
-                  className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-400 focus:border-transparent"
-                />
-                
-                {imagePreview && (
-                  <div className="relative w-full h-64 rounded-lg overflow-hidden bg-gray-100">
-                    <Image
-                      src={imagePreview}
-                      alt="Memory preview"
-                      fill
-                      className="object-cover"
-                      onError={() => {
-                        console.log("Image failed to load:", imagePreview);
-                        setImagePreview(null);
-                      }}
-                      onLoad={() => {
-                        console.log("Image loaded successfully:", imagePreview);
-                      }}
-                    />
-                  </div>
-                )}
-                
-                {!imagePreview && (
-                  <div className="w-full h-64 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center">
-                    <div className="text-center">
-                      <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"/>
-                      </svg>
-                      <p className="text-gray-500">Enter an image URL to preview</p>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <ImageUpload 
+                onImageUpload={handleImageUpload}
+                currentImage={formData.imageUrl}
+                placeholder="Upload your memory photo"
+              />
             </div>
 
             {/* Title */}

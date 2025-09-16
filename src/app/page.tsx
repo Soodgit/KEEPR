@@ -14,11 +14,12 @@ export default function HomePage() {
     const token = localStorage.getItem("token");
     if (token) {
       setIsLoggedIn(true);
+      // Redirect to wall page if logged in
+      router.replace("/wall");
     }
-  }, []);
+  }, [router]);
 
   if (isLoggedIn) {
-    router.replace("/wall");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p>Redirecting to your KEEPR collection...</p>
